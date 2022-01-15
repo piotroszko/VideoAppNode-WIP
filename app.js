@@ -19,4 +19,7 @@ app.use('/api/v1/users', userController);
 const authController = require('controllers/authController');
 app.use('/api/v1/authentication', authController);
 
+const videoController = require('controllers/videoController');
+app.use('/api/v1/video', videoController);
+
 module.exports = app;
