@@ -26,6 +26,7 @@
     "bcryptjs": "^2.4.3",
     "body-parser": "^1.18.3",
     "express": "^4.16.4",
+    "express-formidable": "^1.2.0",
     "jsonwebtoken": "^8.4.0",
     "mongoose": "^5.4.9",
     "rootpath": "^0.1.2"

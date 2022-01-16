@@ -7,8 +7,11 @@ const Video = require('../models/Video');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const config = require('../config/index');
+const formidable = require('express-formidable');
+const fs = require('fs');
+const path = require('path');
 
-router.get('/:id', function(req, res) {
+router.get('/v/:id', function(req, res) {
   Video.findById(req.params.id, function (error, video) {
     if (error) {
       return res.status(httpStatus.INTERNAL_SERVER_ERROR).send(`Server error: ${error.message}`);
@@ -19,6 +22,17 @@ router.get('/:id', function(req, res) {
       return res.status(httpStatus.NOT_FOUND).send(`Video not found (_id: ${req.videoId})`);
     }
   });
+});
+
+
+router.post('/upload', formidable({ uploadDir: path.join('./','public', 'videos' , 'tmp'), keepExtensions: true }), async (req, res) => {
+
+  const file = req.files.file;
+  console.log(file);
+
+  const fields = req.fields;
+  console.log('fields = ' + JSON.stringify(fields));
+  res.status(httpStatus.OK);
 });
 
 module.exports = router;
