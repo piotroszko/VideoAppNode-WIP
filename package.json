@@ -29,6 +29,7 @@
     "express-formidable": "^1.2.0",
     "jsonwebtoken": "^8.4.0",
     "mongoose": "^5.4.9",
+    "nanoid": "^3.2.0",
     "rootpath": "^0.1.2"
   },
   "devDependencies": {

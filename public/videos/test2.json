@@ -1,0 +1,127 @@
+{
+	"info": {
+		"_postman_id": "dc1923e2-d3bf-4f30-8971-6596bf18e919",
+		"name": "VideoNode",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Register",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{ \"name\": \"Piotroszko\", \"email\": \"piotroszko2@gmail.com\", \"password\":\"12345678\", \"application\":\"api-jwt\"}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://localhost:4000/api/v1/authentication/register",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "4000",
+					"path": [
+						"api",
+						"v1",
+						"authentication",
+						"register"
+					],
+					"query": [
+						{
+							"key": "name",
+							"value": "piotr ros",
+							"disabled": true
+						},
+						{
+							"key": "email",
+							"value": "piotroszko2@gmail.com",
+							"disabled": true
+						},
+						{
+							"key": "password",
+							"value": "12345678",
+							"disabled": true
+						},
+						{
+							"key": "application",
+							"value": "api-jwt",
+							"disabled": true
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Me req",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjYxZDk3NGI4ZjBhY2I4MTUxOWZjNWQ3YiIsImlhdCI6MTY0MTY0MTE0NCwiZXhwIjoxNjQxNzI3NTQ0LCJhdWQiOiJhcGktand0IiwiaXNzIjoid3d3LnlvdXJkb21haW5uYW1lLmNvbSIsInN1YiI6InBpb3Ryb3N6a28yQGdtYWlsLmNvbSJ9.jlVDYKcDs4ew0sz2_rDSBOezxPxB3sMUzyG0KFLAnsNtPYzkF7eIxuUxBWatggmJFp97cfUFItJiCh1y1vhPKQ",
+						"type": "text"
+					}
+				],
+				"url": {
+					"raw": "http://localhost:4000/api/v1/authentication/me?application=api-jwt",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "4000",
+					"path": [
+						"api",
+						"v1",
+						"authentication",
+						"me"
+					],
+					"query": [
+						{
+							"key": "application",
+							"value": "api-jwt"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Login",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{ \"email\": \"piotroszko2@gmail.com\", \"password\":\"12345678\", \"application\":\"api-jwt\"}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://localhost:4000/api/v1/authentication/login",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "4000",
+					"path": [
+						"api",
+						"v1",
+						"authentication",
+						"login"
+					]
+				}
+			},
+			"response": []
+		}
+	]
+}

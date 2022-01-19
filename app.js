@@ -9,6 +9,14 @@ const bodyParser = require('body-parser')
 app.use(bodyParser.urlencoded({extended: true}))
 app.use(bodyParser.json());
 
+app.use(function(req, res, next) {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Access-Control-Allow-Credentials', true);
+  next();
+});
+
 app.get('/api/v1', function (req, res) {
   res.status(httpStatus.OK).send('API v1 running');
 });
@@ -21,5 +29,7 @@ app.use('/api/v1/authentication', authController);
 
 const videoController = require('controllers/videoController');
 app.use('/api/v1/video', videoController);
+
+app.use(express.static('public'));
 
 module.exports = app;
