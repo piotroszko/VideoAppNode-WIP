@@ -1,5 +1,5 @@
-const mongoose = require('mongoose');
-mongoose.set('useFindAndModify', false);
+const mongoose = require("mongoose");
+mongoose.set("useFindAndModify", false);
 const Schema = mongoose.Schema;
 
 const userSchema = new Schema({
@@ -8,7 +8,7 @@ const userSchema = new Schema({
     minlength: 2,
     required: true,
     trim: true,
-    type: String
+    type: String,
   },
   email: {
     lowercase: true,
@@ -17,15 +17,14 @@ const userSchema = new Schema({
     required: false,
     trim: true,
     type: String,
-    unique: true
+    unique: true,
   },
   password: {
     required: true,
-    type: String
+    type: String,
   },
 });
 
+userSchema.set("toJSON", { virtuals: true });
 
-userSchema.set('toJSON', { virtuals: true });
-
-module.exports = mongoose.model('User', userSchema);
+module.exports = mongoose.model("User", userSchema);
