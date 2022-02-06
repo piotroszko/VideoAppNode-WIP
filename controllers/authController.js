@@ -60,14 +60,12 @@ router.get("/refreshtoken", verifyToken, function (req, res, next) {
         .send(`Server error: ${error.message}`);
     }
     if (user) {
-      res
-        .status(httpStatus.OK)
-        .send({
-          token: jwtModule.sign(
-            { id: user._id },
-            { subject: user.email, audience: audience }
-          ),
-        });
+      res.status(httpStatus.OK).send({
+        token: jwtModule.sign(
+          { id: user._id },
+          { subject: user.email, audience: audience }
+        ),
+      });
     } else {
       return res
         .status(httpStatus.NOT_FOUND)
