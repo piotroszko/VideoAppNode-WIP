@@ -4,6 +4,7 @@ const httpStatus = require("../lib/httpStatus");
 const jwtModule = require("../lib/jwtModule");
 const verifyToken = require("../lib/verifyToken");
 const Video = require("../models/Video");
+const User = require("../models/User");
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcryptjs");
 const config = require("../config/index");
@@ -20,7 +21,7 @@ const ffmpeg = require("fluent-ffmpeg")()
   .setFfmpegPath(ffmpegInstaller.path);
 
 router.get("/v/:id", function (req, res) {
-  Video.findById(req.params.id, function (error, video) {
+  Video.findOne({ id: req.params.id }, function (error, video) {
     if (error) {
       return res
         .status(httpStatus.INTERNAL_SERVER_ERROR)
@@ -30,8 +31,7 @@ router.get("/v/:id", function (req, res) {
       res.status(httpStatus.OK).send({
         id: video.id,
         name: video.name,
-        sourceUrl: video.sourceUrl,
-        thumbnailUrl: video.thumbnailUrl,
+        description: video.description,
         userId: video.userId,
       });
     } else {
@@ -46,14 +46,25 @@ router.get("/vs/", async function (req, res) {
   const videoFind = await Video.find({ publicity: "public" })
     .sort("name")
     .limit(10);
+  const stats = await VideoStats.find({
+    $or: videoFind.map((v) => ({
+      videoID: v.id,
+    })),
+  });
+  const channels = await User.find({
+    $or: videoFind.map((v) => ({
+      _id: v.userId,
+    })),
+  });
   const videos = videoFind.map((v) => ({
     id: v.id,
     userId: v.userId,
+    channelName: channels.find((c) => c._id == v.userId).name,
     name: v.name,
     description: v.description,
     tags: v.tags,
+    views: stats.find((s) => s.videoID == v.id).views,
   }));
-
   return res.status(httpStatus.OK).send({ videos });
 });
 
@@ -139,32 +150,34 @@ router.post(
               videoId + path.parse(file.name).ext
             )
           )
-          .size("320x180")
-          .outputOptions([`-vf fps=1/${20}`])
           .autopad([(color = "black")])
-          .output(
-            path.join("./", "public", "info", "preview", videoId + ".gif")
-          )
-          .on("end", () => {
-            console.log("Finished");
-          })
-          .on("error", (e) => console.log(e))
-          .run();
-        ffmpeg
-          .input(
-            path.join(
-              "./",
-              "public",
-              "videos",
-              videoId + path.parse(file.name).ext
-            )
-          )
           .screenshots({
             timestamps: ["30%"],
             filename: videoId + ".png",
             folder: path.join("./", "public", "info", "thumbnails"),
             size: "320x180",
-          });
+          })
+          .videoFilters([
+            {
+              filter: "setpts",
+              options: "2*PTS",
+            },
+            {
+              filter: "fps",
+              options: "1",
+            },
+            {
+              filter: "pad",
+              options: "ih*16/9:ih:(ow-iw)/2:(oh-ih)/2",
+            },
+            {
+              filter: "scale",
+              options: "320x180",
+            },
+          ])
+          .output(
+            path.join("./", "public", "info", "preview", videoId + ".gif")
+          );
         await Video.findOne(
           { id: videoId, userId: req.userId },
           function (err, vid) {

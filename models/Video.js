@@ -28,20 +28,6 @@ const videoSchema = new Schema({
     required: false,
     type: String,
   },
-  sourceUrl: {
-    lowercase: true,
-    maxlength: 255,
-    minlength: 5,
-    required: false,
-    type: String,
-  },
-  thumbnailUrl: {
-    lowercase: true,
-    maxlength: 255,
-    minlength: 5,
-    required: false,
-    type: String,
-  },
   userId: {
     lowercase: true,
     maxlength: 255,
