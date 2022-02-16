@@ -7,14 +7,18 @@ const videoStatSchema = new Schema({
     required: true,
     type: String,
   },
-  likes: {
-    type: Number,
-    default: 0,
-  },
-  dislikes: {
-    type: Number,
-    default: 0,
-  },
+  liked: [
+    {
+      type: Schema.ObjectId,
+      ref: "User",
+    },
+  ],
+  disliked: [
+    {
+      type: Schema.ObjectId,
+      ref: "User",
+    },
+  ],
   views: {
     type: Number,
     default: 0,

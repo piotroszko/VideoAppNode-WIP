@@ -12,7 +12,6 @@ const formidable = require("express-formidable");
 const { readdirSync, renameSync } = require("fs");
 const path = require("path");
 const { customAlphabet } = require("nanoid");
-const VideoLikes = require("../models/VideoLike");
 const VideoStats = require("../models/VideoStats");
 const ffmpegInstaller = require("@ffmpeg-installer/ffmpeg");
 const ffprobe = require("@ffprobe-installer/ffprobe");
@@ -20,32 +19,37 @@ const ffmpeg = require("fluent-ffmpeg")()
   .setFfprobePath(ffprobe.path)
   .setFfmpegPath(ffmpegInstaller.path);
 
-router.get("/v/:id", function (req, res) {
-  Video.findOne({ id: req.params.id }, function (error, video) {
-    if (error) {
-      return res
-        .status(httpStatus.INTERNAL_SERVER_ERROR)
-        .send(`Server error: ${error.message}`);
-    }
-    if (video) {
-      res.status(httpStatus.OK).send({
-        id: video.id,
-        name: video.name,
-        description: video.description,
-        userId: video.userId,
-      });
-    } else {
-      return res
-        .status(httpStatus.NOT_FOUND)
-        .send(`Video not found (_id: ${req.videoId})`);
-    }
-  });
+router.get("/v/:id", async function (req, res) {
+  try {
+    const video = await Video.findOne({ id: req.params.id });
+    const user = await User.findOne({ _id: video.userId });
+    const videoStats = await VideoStats.findOne({ videoID: req.params.id });
+    const videoObject = {
+      id: video.id,
+      name: video.name,
+      description: video.description,
+      tags: video.tags,
+      userId: video.userId,
+      channelName: user.name,
+      views: videoStats.views,
+      likes: videoStats.liked.length,
+      dislikes: videoStats.disliked.length,
+    };
+    return res.status(httpStatus.OK).send(videoObject);
+  } catch (err) {
+    return res
+      .status(httpStatus.INTERNAL_SERVER_ERROR)
+      .send(`Server error: ${err}`);
+  }
 });
 
 router.get("/vs/", async function (req, res) {
   const videoFind = await Video.find({ publicity: "public" })
     .sort("name")
     .limit(10);
+  if (videoFind.length === 0) {
+    return res.status(httpStatus.OK).send({ videoFind });
+  }
   const stats = await VideoStats.find({
     $or: videoFind.map((v) => ({
       videoID: v.id,
@@ -193,135 +197,81 @@ router.post(
 );
 
 router.get("/like/:id", verifyToken, function (req, res) {
-  Video.findOne({ id: req.params.id }, function (err, video) {
+  VideoStats.findOne({ videoID: req.params.id }, function (err, videoStats) {
     if (err) {
       return res.status(httpStatus.BAD_REQUEST).send(err);
     }
-    if (video) {
-      VideoLikes.findOne(
-        { videoID: req.params.id, userID: req.userId },
-        function (err, item) {
-          if (err) {
-            return res.status(httpStatus.BAD_REQUEST).send(" Server error ");
-          }
-          if (item) {
-            return res
-              .status(httpStatus.OK)
-              .send({ likeStatus: item.likeStatus });
-          } else {
-            return res.status(httpStatus.OK).send({ likeStatus: "none" });
-          }
-        }
-      );
+    if (videoStats) {
+      if (videoStats.liked.includes(req.userId)) {
+        return res.status(httpStatus.OK).send({ likeStatus: "like" });
+      } else if (videoStats.disliked.includes(req.userId)) {
+        return res.status(httpStatus.OK).send({ likeStatus: "dislike" });
+      } else {
+        return res.status(httpStatus.OK).send({ likeStatus: "none" });
+      }
     } else {
       return res.status(httpStatus.BAD_REQUEST).send("Not found");
     }
   });
 });
 router.post("/like/:id", verifyToken, function (req, res) {
-  Video.findOne({ id: req.params.id }, function (err, video) {
+  VideoStats.findOne({ videoID: req.params.id }, function (err, videoStats) {
     if (err) {
       return res.status(httpStatus.BAD_REQUEST).send(err);
     }
-    if (video) {
-      VideoLikes.updateOne(
-        { videoID: req.params.id, userID: req.userId },
-        { videoID: req.params.id, userID: req.userId, likeStatus: "like" },
-        { upsert: true },
-        function (err, response) {
-          if (err) {
-            return res.status(httpStatus.BAD_REQUEST).send(" Server error ");
-          }
-          if (response) {
-            VideoStats.findOne(
-              { _id: req.params.id },
-              function (err, videoStats) {
-                videoStats.likes = videoStats.likes + 1;
-                videoStats.save();
-              }
-            );
-            res.status(httpStatus.OK).send({ likeStatus: "like" });
-          } else {
-            return res.status(httpStatus.BAD_REQUEST).send(" Bad request ");
-          }
-        }
-      );
+    if (videoStats) {
+      if (videoStats.liked.includes(req.userId)) {
+        return res.status(httpStatus.OK).send({ likeStatus: "like" });
+      } else if (videoStats.disliked.includes(req.userId)) {
+        videoStats.disliked = videoStats.disliked.filter(
+          (i) => i === req.userId
+        );
+        videoStats.liked.push(req.userId);
+        videoStats.save();
+        return res.status(httpStatus.OK).send({ likeStatus: "like" });
+      } else {
+        videoStats.liked.push(req.userId);
+        videoStats.save();
+        return res.status(httpStatus.OK).send({ likeStatus: "like" });
+      }
     } else {
       return res.status(httpStatus.BAD_REQUEST).send("Not found");
     }
   });
 });
 router.post("/unlike/:id", verifyToken, function (req, res) {
-  Video.findOne({ id: req.params.id }, function (err, video) {
+  VideoStats.findOne({ videoID: req.params.id }, function (err, videoStats) {
     if (err) {
       return res.status(httpStatus.BAD_REQUEST).send(err);
     }
-    if (video) {
-      VideoLikes.updateOne(
-        { videoID: req.params.id, userID: req.userId },
-        { videoID: req.params.id, userID: req.userId, likeStatus: "none" },
-        { upsert: true },
-        function (err, response) {
-          if (err) {
-            return res.status(httpStatus.BAD_REQUEST).send(" Server error ");
-          }
-          if (response) {
-            if (response.likeStaus === "like") {
-              VideoStats.findOne(
-                { _id: req.params.id },
-                function (err, videoStats) {
-                  videoStats.likes = videoStats.likes - 1;
-                  videoStats.save();
-                }
-              );
-            } else if (response.likeStaus === "dislike") {
-              VideoStats.findOne(
-                { _id: req.params.id },
-                function (err, videoStats) {
-                  videoStats.dislikes = videoStats.dislikes - 1;
-                  videoStats.save();
-                }
-              );
-            }
-            res.status(httpStatus.OK).send({ likeStatus: "none" });
-          } else {
-            return res.status(httpStatus.BAD_REQUEST).send(" Bad request ");
-          }
-        }
-      );
+    if (videoStats) {
+      videoStats.liked = videoStats.liked.filter((i) => i === req.userId);
+      videoStats.disliked = videoStats.disliked.filter((i) => i === req.userId);
+      videoStats.save();
+      return res.status(httpStatus.OK).send({ likeStatus: "none" });
     } else {
       return res.status(httpStatus.BAD_REQUEST).send("Not found");
     }
   });
 });
 router.post("/dislike/:id", verifyToken, function (req, res) {
-  Video.findOne({ id: req.params.id }, function (err, video) {
+  VideoStats.findOne({ videoID: req.params.id }, function (err, videoStats) {
     if (err) {
       return res.status(httpStatus.BAD_REQUEST).send(err);
     }
-    if (video) {
-      VideoLikes.updateOne(
-        { videoID: req.params.id, userID: req.userId },
-        { videoID: req.params.id, userID: req.userId, likeStatus: "dislike" },
-        { upsert: true },
-        function (err, response) {
-          if (err) {
-            return res.status(httpStatus.BAD_REQUEST).send(" Server error ");
-          }
-          if (response) {
-            VideoStats.findOne(
-              { _id: req.params.id },
-              function (err, videoStats) {
-                videoStats.dislikes = videoStats.dislikes + 1;
-                videoStats.save();
-              }
-            );
-            return res.status(httpStatus.OK).send({ likeStatus: "dislike" });
-          } else {
-            return res.status(httpStatus.BAD_REQUEST).send(" Bad request ");
-          }
-        }
-      );
+    if (videoStats) {
+      if (videoStats.disliked.includes(req.userId)) {
+        return res.status(httpStatus.OK).send({ likeStatus: "dislike" });
+      } else if (videoStats.liked.includes(req.userId)) {
+        videoStats.liked = videoStats.liked.filter((i) => i === req.userId);
+        videoStats.disliked.push(req.userId);
+        videoStats.save();
+        return res.status(httpStatus.OK).send({ likeStatus: "dislike" });
+      } else {
+        videoStats.disliked.push(req.userId);
+        videoStats.save();
+        return res.status(httpStatus.OK).send({ likeStatus: "dislike" });
+      }
     } else {
       return res.status(httpStatus.BAD_REQUEST).send("Not found");
     }

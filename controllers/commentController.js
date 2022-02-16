@@ -18,6 +18,9 @@ router.get("/all/:id", function (req, res, next) {
     }
     if (video) {
       Comment.find({ videoID: req.params.id }, async function (error, comment) {
+        if (comment.length === 0) {
+          return res.status(httpStatus.OK).send(comment);
+        }
         const users = await User.find({
           $or: comment.map((v) => ({
             _id: v.userID,
@@ -161,7 +164,7 @@ router.get("/like/:id", verifyToken, function (req, res) {
         return res.status(httpStatus.OK).send({ likeStatus: "none" });
       }
     } else {
-      res.status(httpStatus.OK).send({ likeStatus: "none" });
+      return res.status(httpStatus.BAD_REQUEST).send("Not found");
     }
   });
 });
