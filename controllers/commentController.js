@@ -231,4 +231,51 @@ router.post("/unlike/:id", verifyToken, function (req, res) {
   });
 });
 
+router.get("/my/", verifyToken, async function (req, res) {
+  try {
+    const comments = await Comment.find({ userID: req.userId });
+    if (comments.length === 0) {
+      return res.status(httpStatus.OK).send({});
+    }
+    const videos = await Video.find({
+      $or: comments.map((c) => ({
+        id: c.videoID,
+      })),
+    });
+    const channels = await User.find({
+      $or: videos.map((v) => ({
+        _id: v.userId,
+      })),
+    });
+    const commentLikes = await CommentLike.find({
+      $or: comments.map((c) => ({
+        commentID: c._id,
+      })),
+    });
+    const commentsList = videos.map((v) => ({
+      id: v.id,
+      name: v.name,
+      userId: v.userId,
+      channelName: channels.find((u) => u.id == v.userId).name,
+      comments: comments
+        .filter((c) => c.videoID === v.id)
+        .map((c) => {
+          return {
+            title: c.title,
+            content: c.content,
+            likes: commentLikes.find((cl) => cl.commentID == c._id).liked
+              .length,
+            dislikes: commentLikes.find((cl) => cl.commentID == c._id).disliked
+              .length,
+          };
+        }),
+    }));
+    return res.status(httpStatus.OK).send(commentsList);
+  } catch (err) {
+    return res
+      .status(httpStatus.INTERNAL_SERVER_ERROR)
+      .send(`Server error: ${err}`);
+  }
+});
+
 module.exports = router;

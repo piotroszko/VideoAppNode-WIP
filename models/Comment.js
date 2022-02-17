@@ -21,14 +21,6 @@ const commentSchema = new Schema({
     default: "",
     minlength: 0,
   },
-  likes: {
-    type: Number,
-    default: 0,
-  },
-  dislikes: {
-    type: Number,
-    default: 0,
-  },
 });
 
 commentSchema.set("toJSON", { virtuals: true });
