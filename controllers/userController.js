@@ -2,6 +2,10 @@ const express = require("express");
 const router = express.Router();
 const httpStatus = require("lib/httpStatus");
 const User = require("../models/User");
+const verifyToken = require("../lib/verifyToken");
+const formidable = require("express-formidable");
+const { readdirSync, renameSync, unlinkSync, existsSync } = require("fs");
+const path = require("path");
 
 router.post("/", function (req, res) {
   User.create(
@@ -68,6 +72,52 @@ router.put("/:id", function (req, res) {
       res.status(httpStatus.NO_CONTENT).send(user);
     }
   );
+});
+router.post(
+  "/uploadPicture",
+  verifyToken,
+  formidable({
+    uploadDir: path.join("./", "public", "users"),
+    keepExtensions: true,
+  }),
+  (req, res) => {
+    const file = req.files.file;
+    if (path.extname(file.path) !== ".png") {
+      unlinkSync(file.path);
+      return res
+        .status(httpStatus.BAD_REQUEST)
+        .send(" Bad file type. Expected image type.");
+    } else {
+      try {
+        renameSync(
+          file.path,
+          path.join(
+            "./",
+            "public",
+            "users",
+            req.userId + path.parse(file.name).ext
+          )
+        );
+        return res.status(httpStatus.OK).send("Avatar successfully uploaded!");
+      } catch (err) {
+        return res
+          .status(httpStatus.INTERNAL_SERVER_ERROR)
+          .send(`Server error: ${err.message}`);
+      }
+    }
+  }
+);
+router.get("/avatar/:id", (req, res) => {
+  const id = req.params.id;
+  if (existsSync(path.join("./", "public", "users", req.params.id + ".png"))) {
+    return res
+      .status(httpStatus.OK)
+      .send(path.join("./", "users", req.params.id + ".png"));
+  } else {
+    return res
+      .status(httpStatus.OK)
+      .send(path.join("./", "users", "defaultAvatar.png"));
+  }
 });
 
 module.exports = router;

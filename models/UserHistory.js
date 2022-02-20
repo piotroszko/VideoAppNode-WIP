@@ -2,15 +2,19 @@ const mongoose = require("mongoose");
 mongoose.set("useFindAndModify", false);
 const Schema = mongoose.Schema;
 
-const historyRowSchema = new Schema({
-  videoID: { type: String, required: true },
-  watchDate: { type: Date, required: true },
-});
+const historyRowSchema = new Schema(
+  {
+    videoID: { type: String, required: true },
+    watchDate: { type: Date, required: true },
+  },
+  {
+    timestamps: true,
+  }
+);
 const userHistorySchema = new Schema({
   userID: {
-    required: true,
-    type: String,
-    unique: true,
+    type: Schema.ObjectId,
+    ref: "User",
   },
   videoIDs: [historyRowSchema],
 });

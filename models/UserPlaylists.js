@@ -13,9 +13,8 @@ const playlistSchema = new Schema({
 
 const userPlaylistsSchema = new Schema({
   userID: {
-    required: true,
-    type: String,
-    unique: true,
+    type: Schema.ObjectId,
+    ref: "User",
   },
   videoIDs: [playlistSchema],
 });

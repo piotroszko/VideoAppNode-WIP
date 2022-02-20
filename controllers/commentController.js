@@ -65,6 +65,7 @@ router.get("/all/:id", function (req, res, next) {
                 videoID: com.videoID,
                 userID: com.userID,
                 userName: users.find((u) => u.id == com.userID).name,
+                createdAt: com.createdAt,
               };
             });
 

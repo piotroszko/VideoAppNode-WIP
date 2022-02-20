@@ -42,11 +42,44 @@ router.get("/v/:id", async function (req, res) {
       .send(`Server error: ${err}`);
   }
 });
+router.post("/viewed/:id", async function (req, res) {
+  VideoStats.findOne({ videoID: req.params.id }, function (error, stats) {
+    if (error) {
+      const message = `Server error: ${error.message}`;
+      return res
+        .status(httpStatus.INTERNAL_SERVER_ERROR)
+        .send({ videoStats: false, error: message });
+    }
+    if (stats) {
+      stats.views = stats.views + 1;
+      stats.save();
+      res.status(httpStatus.OK).send({ videoStats: true });
+    } else {
+      return res
+        .status(httpStatus.INTERNAL_SERVER_ERROR)
+        .send({ videoStats: false });
+    }
+  });
+});
 
 router.get("/vs/", async function (req, res) {
-  const videoFind = await Video.find({ publicity: "public" })
-    .sort("name")
-    .limit(10);
+  let videoFind = [];
+  if (req.body.filter) {
+    if (req.body.filter === "name") {
+      videoFind = await Video.find({ publicity: "public" }).sort("name");
+    } else if (req.body.filter === "date") {
+      videoFind = await Video.find({ publicity: "public" }).sort("createdAt");
+    } else if (req.body.filter === "channel" && req.body.id) {
+      videoFind = await Video.find({
+        publicity: "public",
+        userId: req.body.id,
+      }).sort("createdAt");
+    } else {
+      videoFind = await Video.find({ publicity: "public" }).sort("name");
+    }
+  } else {
+    videoFind = await Video.find({ publicity: "public" }).sort("name");
+  }
   if (videoFind.length === 0) {
     return res.status(httpStatus.OK).send({ videoFind });
   }
@@ -68,7 +101,13 @@ router.get("/vs/", async function (req, res) {
     description: v.description,
     tags: v.tags,
     views: stats.find((s) => s.videoID == v.id).views,
+    createdAt: v.createdAt,
   }));
+  if (req.body.filter) {
+    if (req.body.filter === "views") {
+      videos.sort((a, b) => b.views - a.views);
+    }
+  }
   return res.status(httpStatus.OK).send({ videos });
 });
 
@@ -129,9 +168,7 @@ router.post(
     if (!file.type.match("video.*")) {
       return res
         .status(httpStatus.BAD_REQUEST)
-        .send(
-          " Bad file type. Expected video type, got: " + file.type.ToString()
-        );
+        .send(" Bad file type. Expected video type. ");
     }
     Video.find({ id: videoId, userId: req.userId }, async (err, data) => {
       if (err) throw err;
@@ -276,6 +313,35 @@ router.post("/dislike/:id", verifyToken, function (req, res) {
       return res.status(httpStatus.BAD_REQUEST).send("Not found");
     }
   });
+});
+router.get("/my/", verifyToken, async function (req, res) {
+  try {
+    const videoFind = await Video.find({ userId: req.userId });
+    if (videoFind.length === 0) {
+      return res.status(httpStatus.OK).send({ videoFind });
+    }
+    const stats = await VideoStats.find({
+      $or: videoFind.map((v) => ({
+        videoID: v.id,
+      })),
+    });
+    const videos = videoFind.map((v) => ({
+      id: v.id,
+      userId: v.userId,
+      name: v.name,
+      description: v.description,
+      tags: v.tags,
+      views: stats.find((s) => s.videoID == v.id).views,
+      likes: stats.find((s) => s.videoID == v.id).liked.length,
+      dislikes: stats.find((s) => s.videoID == v.id).disliked.length,
+      createdAt: v.createdAt,
+    }));
+    return res.status(httpStatus.OK).send(videos);
+  } catch (err) {
+    return res
+      .status(httpStatus.INTERNAL_SERVER_ERROR)
+      .send(`Server error: ${err}`);
+  }
 });
 
 module.exports = router;
