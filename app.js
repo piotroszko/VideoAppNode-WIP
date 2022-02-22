@@ -36,8 +36,8 @@ app.use("/api/v1/video", videoController);
 const commentController = require("controllers/commentController");
 app.use("/api/v1/c", commentController);
 
-const playlistController = require("controllers/playlistController");
-app.use("/api/v1/playlist", playlistController);
+const listsController = require("controllers/listsController");
+app.use("/api/v1/lists", listsController);
 
 app.use(express.static("public"));
 

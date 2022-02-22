@@ -5,7 +5,6 @@ const Schema = mongoose.Schema;
 const historyRowSchema = new Schema(
   {
     videoID: { type: String, required: true },
-    watchDate: { type: Date, required: true },
   },
   {
     timestamps: true,
@@ -15,6 +14,7 @@ const userHistorySchema = new Schema({
   userID: {
     type: Schema.ObjectId,
     ref: "User",
+    required: true,
   },
   videoIDs: [historyRowSchema],
 });

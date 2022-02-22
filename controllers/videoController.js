@@ -63,22 +63,53 @@ router.post("/viewed/:id", async function (req, res) {
 });
 
 router.get("/vs/", async function (req, res) {
+  const limit = 20;
   let videoFind = [];
+  const searchText = req.body.name ? req.body.name : "";
+  const page = req.body.page ? req.body.page : 0;
   if (req.body.filter) {
     if (req.body.filter === "name") {
-      videoFind = await Video.find({ publicity: "public" }).sort("name");
+      videoFind = await Video.find({
+        publicity: "public",
+        name: { $regex: searchText, $options: "i" },
+      })
+        .sort("name")
+        .limit(limit)
+        .skip(page * limit);
     } else if (req.body.filter === "date") {
-      videoFind = await Video.find({ publicity: "public" }).sort("createdAt");
+      videoFind = await Video.find({
+        publicity: "public",
+        name: { $regex: searchText, $options: "i" },
+      })
+        .sort("createdAt")
+        .limit(limit)
+        .skip(page * limit);
     } else if (req.body.filter === "channel" && req.body.id) {
       videoFind = await Video.find({
         publicity: "public",
         userId: req.body.id,
-      }).sort("createdAt");
+        name: { $regex: searchText, $options: "i" },
+      })
+        .sort("createdAt")
+        .limit(limit)
+        .skip(page * limit);
     } else {
-      videoFind = await Video.find({ publicity: "public" }).sort("name");
+      videoFind = await Video.find({
+        publicity: "public",
+        name: { $regex: searchText, $options: "i" },
+      })
+        .sort("name")
+        .limit(limit)
+        .skip(page * limit);
     }
   } else {
-    videoFind = await Video.find({ publicity: "public" }).sort("name");
+    videoFind = await Video.find({
+      publicity: "public",
+      name: { $regex: searchText, $options: "i" },
+    })
+      .sort("name")
+      .limit(limit)
+      .skip(page * limit);
   }
   if (videoFind.length === 0) {
     return res.status(httpStatus.OK).send({ videoFind });
@@ -337,6 +368,38 @@ router.get("/my/", verifyToken, async function (req, res) {
       createdAt: v.createdAt,
     }));
     return res.status(httpStatus.OK).send(videos);
+  } catch (err) {
+    return res
+      .status(httpStatus.INTERNAL_SERVER_ERROR)
+      .send(`Server error: ${err}`);
+  }
+});
+router.get("/suggest/:text", async function (req, res) {
+  try {
+    const videoFind = await Video.find({
+      publicity: "public",
+      name: { $regex: req.params.text, $options: "i" },
+    }).select("name id -_id");
+    if (videoFind.length === 0) {
+      return res.status(httpStatus.OK).send({ videoFind });
+    }
+    const stats = await VideoStats.find({
+      $or: videoFind.map((v) => ({
+        videoID: v.id,
+      })),
+    });
+    const videos = videoFind
+      .map((v) => ({
+        name: v.name,
+        views: stats.find((f) => f.videoID === v.id).views,
+        id: v.id,
+      }))
+      .sort((a, b) => b - a)
+      .filter((f, index) => index <= 10);
+
+    return res
+      .status(httpStatus.OK)
+      .send(videos.map((v) => ({ name: v.name, id: v.id })));
   } catch (err) {
     return res
       .status(httpStatus.INTERNAL_SERVER_ERROR)

@@ -7,6 +7,9 @@ const User = require("../models/User");
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcryptjs");
 const config = require("../config/index");
+const UserPlaylists = require("../models/UserPlaylists");
+const UserHistory = require("../models/UserHistory");
+const UserDetails = require("../models/UserDetails");
 
 router.post("/login", function (req, res) {
   const { application, email, password } = req.body;
@@ -99,6 +102,9 @@ router.post("/register", function (req, res) {
       const payload = { id: user._id };
       const options = { subject: email, audience: application };
       const signedToken = jwtModule.sign(payload, options);
+      UserPlaylists.create({ userID: req.userId });
+      UserHistory.create({ userID: req.userId });
+      UserDetails.create({ userID: req.userId });
       res.status(httpStatus.OK).send({ registered: true, token: signedToken });
     }
   );
@@ -119,6 +125,39 @@ router.get("/me", verifyToken, function (req, res, next) {
       return res
         .status(httpStatus.NOT_FOUND)
         .send(`User not found (_id: ${req.userId})`);
+    }
+  });
+});
+router.post("/changePassword", verifyToken, function (req, res) {
+  const { password, newPassword } = req.body;
+  if (!password || !newPassword) {
+    return res
+      .status(httpStatus.BAD_REQUEST)
+      .send({ auth: false, error: "Invalid parameters in request" });
+  }
+  User.findOne({ _id: req.userId }, function (error, user) {
+    if (error) {
+      const message = `Server error: ${error.message}`;
+      return res
+        .status(httpStatus.INTERNAL_SERVER_ERROR)
+        .send({ auth: false, error: message });
+    } else {
+      if (user) {
+        const passwordMatch = bcrypt.compareSync(password, user.password);
+        if (passwordMatch) {
+          const hashedPassword = bcrypt.hashSync(newPassword, 8);
+          user.password = hashedPassword;
+          user.save();
+          return res.status(httpStatus.OK).send("Password changed!");
+        } else {
+          return res.status(httpStatus.UNAUTHORIZED).send("Wrong password!");
+        }
+      } else {
+        const message = `User not found)`;
+        return res
+          .status(httpStatus.NOT_FOUND)
+          .send({ auth: false, error: message });
+      }
     }
   });
 });
