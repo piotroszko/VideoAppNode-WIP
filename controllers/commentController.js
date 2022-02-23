@@ -236,7 +236,7 @@ router.get("/my/", verifyToken, async function (req, res) {
   try {
     const comments = await Comment.find({ userID: req.userId });
     if (comments.length === 0) {
-      return res.status(httpStatus.OK).send({});
+      return res.status(httpStatus.OK).send([]);
     }
     const videos = await Video.find({
       $or: comments.map((c) => ({

@@ -62,7 +62,7 @@ router.post("/viewed/:id", async function (req, res) {
   });
 });
 
-router.get("/vs/", async function (req, res) {
+router.post("/vs/", async function (req, res) {
   const limit = 20;
   let videoFind = [];
   const searchText = req.body.name ? req.body.name : "";
@@ -89,10 +89,7 @@ router.get("/vs/", async function (req, res) {
         publicity: "public",
         userId: req.body.id,
         name: { $regex: searchText, $options: "i" },
-      })
-        .sort("createdAt")
-        .limit(limit)
-        .skip(page * limit);
+      }).sort("createdAt");
     } else {
       videoFind = await Video.find({
         publicity: "public",
@@ -213,7 +210,10 @@ router.post(
             videoId + path.parse(file.name).ext
           )
         );
-        ffmpeg
+        const ffmpegInstance = require("fluent-ffmpeg")()
+          .setFfprobePath(ffprobe.path)
+          .setFfmpegPath(ffmpegInstaller.path);
+        ffmpegInstance
           .input(
             path.join(
               "./",
@@ -255,6 +255,7 @@ router.post(
           function (err, vid) {
             vid.sourceUrl = "videos/" + videoId + path.parse(file.name).ext;
             vid.save();
+            return res.status(httpStatus.OK);
           }
         );
         return res.status(httpStatus.OK);

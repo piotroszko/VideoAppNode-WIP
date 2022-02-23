@@ -6,6 +6,7 @@ const verifyToken = require("../lib/verifyToken");
 const formidable = require("express-formidable");
 const { readdirSync, renameSync, unlinkSync, existsSync } = require("fs");
 const path = require("path");
+const UserDetails = require("../models/UserDetails");
 
 router.post("/", function (req, res) {
   User.create(
@@ -117,6 +118,96 @@ router.get("/avatar/:id", (req, res) => {
     return res
       .status(httpStatus.OK)
       .send(path.join("./", "users", "defaultAvatar.png"));
+  }
+});
+router.post("/subscribe/:id", verifyToken, (req, res) => {
+  const id = req.params.id;
+  if (id != req.userId) {
+    User.findOne({ _id: req.params.id }, (err, channel) => {
+      if (err) {
+        return res
+          .status(httpStatus.INTERNAL_SERVER_ERROR)
+          .send({ Error: err });
+      }
+      if (channel) {
+        UserDetails.findOne({ userID: req.userId }, (err, userDetails) => {
+          if (err) {
+            return res
+              .status(httpStatus.INTERNAL_SERVER_ERROR)
+              .send({ Error: err });
+          }
+          if (userDetails) {
+            if (userDetails.subscribedToUsers.includes(channel._id)) {
+              return res
+                .status(httpStatus.BAD_REQUEST)
+                .send("You are already subscribed to this channel");
+            } else {
+              console.log(userDetails.subscribedToUsers);
+              userDetails.subscribedToUsers.push(channel._id);
+              userDetails.save();
+              return res
+                .status(httpStatus.OK)
+                .send({ subscribedTo: userDetails.subscribedToUsers });
+            }
+          } else {
+            return res
+              .status(httpStatus.BAD_REQUEST)
+              .send("User details not found");
+          }
+        });
+      } else {
+        return res.status(httpStatus.BAD_REQUEST).send("Channel not found");
+      }
+    });
+  } else {
+    return res
+      .status(httpStatus.BAD_REQUEST)
+      .send("You cant subscribe to this channel.");
+  }
+});
+router.delete("/subscribe/:id", verifyToken, (req, res) => {
+  const id = req.params.id;
+  if (id != req.userId) {
+    User.findOne({ _id: req.params.id }, (err, channel) => {
+      if (err) {
+        return res
+          .status(httpStatus.INTERNAL_SERVER_ERROR)
+          .send({ Error: err });
+      }
+      if (channel) {
+        UserDetails.findOne({ userID: req.userId }, (err, userDetails) => {
+          if (err) {
+            return res
+              .status(httpStatus.INTERNAL_SERVER_ERROR)
+              .send({ Error: err });
+          }
+          if (userDetails) {
+            if (!userDetails.subscribedToUsers.includes(channel._id)) {
+              return res
+                .status(httpStatus.BAD_REQUEST)
+                .send("You are not subscribed to this channel!");
+            } else {
+              const index = userDetails.subscribedToUsers.indexOf(channel._id);
+              userDetails.subscribedToUsers.splice(index, 1);
+              userDetails.save();
+              return res
+                .status(httpStatus.OK)
+                .send({ subscribedTo: userDetails.subscribedToUsers });
+            }
+          } else {
+            return res
+              .status(httpStatus.BAD_REQUEST)
+              .send("User details not found");
+          }
+        });
+      } else {
+        return res.status(httpStatus.BAD_REQUEST).send("Channel not found");
+      }
+    });
+  } else {
+    return res
+      .status(httpStatus.BAD_REQUEST)
+      .send("You cant unsubscribe to this channel.");
   }
 });
 

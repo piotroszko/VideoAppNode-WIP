@@ -23,12 +23,12 @@ const videoSchema = new Schema(
       trim: false,
       type: String,
     },
-    tags: {
+    tags: [{
       maxlength: 100,
       minlength: 0,
       required: false,
-      type: String,
-    },
+      type: String,}
+    ],
     userId: {
       lowercase: true,
       maxlength: 255,
