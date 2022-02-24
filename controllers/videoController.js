@@ -19,6 +19,8 @@ const ffmpeg = require("fluent-ffmpeg")()
   .setFfprobePath(ffprobe.path)
   .setFfmpegPath(ffmpegInstaller.path);
 
+const limit = 20;
+
 router.get("/v/:id", async function (req, res) {
   try {
     const video = await Video.findOne({ id: req.params.id });
@@ -36,6 +38,54 @@ router.get("/v/:id", async function (req, res) {
       dislikes: videoStats.disliked.length,
     };
     return res.status(httpStatus.OK).send(videoObject);
+  } catch (err) {
+    return res
+      .status(httpStatus.INTERNAL_SERVER_ERROR)
+      .send(`Server error: ${err}`);
+  }
+});
+router.get("/recommended/:id/:page?", async function (req, res) {
+  let videoFind = [];
+  const videoID = req.params.id;
+  const page = req.params.page ? req.params.page : 0;
+  try {
+    const video = await Video.findOne({ id: videoID });
+
+    videoFind = await Video.find({
+      id: { $ne: videoID },
+      publicity: "public",
+      tags: { $in: video.tags },
+    })
+      .limit(limit)
+      .skip(limit * page);
+    if (videoFind.length === 0) {
+      return res.status(httpStatus.OK).send({ videoFind });
+    }
+
+    const stats = await VideoStats.find({
+      $or: videoFind.map((v) => ({
+        videoID: v.id,
+      })),
+    });
+    const channels = await User.find({
+      $or: videoFind.map((v) => ({
+        _id: v.userId,
+      })),
+    });
+    const videos = videoFind.map((v) => ({
+      id: v.id,
+      userId: v.userId,
+      channelName: channels.find((c) => c._id == v.userId).name,
+      name: v.name,
+      description: v.description,
+      tags: v.tags,
+      views: stats.find((s) => s.videoID == v.id).views,
+      createdAt: v.createdAt,
+    }));
+
+    return res
+      .status(httpStatus.OK)
+      .send(videos.sort((a, b) => b.views - a.views));
   } catch (err) {
     return res
       .status(httpStatus.INTERNAL_SERVER_ERROR)
@@ -63,7 +113,6 @@ router.post("/viewed/:id", async function (req, res) {
 });
 
 router.post("/vs/", async function (req, res) {
-  const limit = 20;
   let videoFind = [];
   const searchText = req.body.name ? req.body.name : "";
   const page = req.body.page ? req.body.page : 0;

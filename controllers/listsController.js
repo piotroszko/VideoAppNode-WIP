@@ -26,7 +26,7 @@ router.post("/addPlaylist/", verifyToken, async function (req, res) {
   if (!name) {
     return res
       .status(httpStatus.BAD_REQUEST)
-      .send({ registered: false, error: "Invalid parameters in request" });
+      .send({ error: "Invalid parameters in request" });
   }
   UserPlaylists.findOne({ userID: req.userId }, async (err, userPlaylists) => {
     if (err) {
@@ -71,7 +71,7 @@ router.post("/addToPlaylist/", verifyToken, async function (req, res) {
   if (!id || !videoID) {
     return res
       .status(httpStatus.BAD_REQUEST)
-      .send({ registered: false, error: "Invalid parameters in request" });
+      .send({ error: "Invalid parameters in request" });
   }
   UserPlaylists.findOne({ userID: req.userId }, async (err, userPlaylists) => {
     if (err) {
@@ -115,9 +115,11 @@ router.post("/addToPlaylist/", verifyToken, async function (req, res) {
 router.delete("/removeFromPlaylist/", verifyToken, async function (req, res) {
   const { id, videoID } = req.body;
   if (!id || !videoID) {
-    return res
-      .status(httpStatus.BAD_REQUEST)
-      .send({ registered: false, error: "Invalid parameters in request" });
+    return res.status(httpStatus.BAD_REQUEST).send({
+      error: `Invalid parameters in request id:${id && id}, videoID:${
+        videoID && videoID
+      }`,
+    });
   }
   UserPlaylists.findOne({ userID: req.userId }, async (err, userPlaylists) => {
     if (err) {
