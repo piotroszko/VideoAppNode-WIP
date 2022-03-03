@@ -8,7 +8,7 @@ const jwt = require("jsonwebtoken");
 const bcrypt = require("bcryptjs");
 const config = require("../config/index");
 const UserPlaylists = require("../models/UserPlaylists");
-const UserHistory = require("../models/UserHistory");
+const UserGeneralLists = require("../models/UserGeneralLists");
 const UserDetails = require("../models/UserDetails");
 
 router.post("/login", function (req, res) {
@@ -103,7 +103,7 @@ router.post("/register", function (req, res) {
       const options = { subject: email, audience: application };
       const signedToken = jwtModule.sign(payload, options);
       UserPlaylists.create({ userID: req.userId });
-      UserHistory.create({ userID: req.userId });
+      UserGeneralLists.create({ userID: req.userId });
       UserDetails.create({ userID: req.userId });
       res.status(httpStatus.OK).send({ registered: true, token: signedToken });
     }

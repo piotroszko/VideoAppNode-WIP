@@ -92,6 +92,7 @@ router.get("/recommended/:id/:page?", async function (req, res) {
       .send(`Server error: ${err}`);
   }
 });
+
 router.post("/viewed/:id", async function (req, res) {
   VideoStats.findOne({ videoID: req.params.id }, function (error, stats) {
     if (error) {

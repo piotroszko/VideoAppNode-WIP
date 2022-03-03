@@ -2,7 +2,7 @@ const mongoose = require("mongoose");
 mongoose.set("useFindAndModify", false);
 const Schema = mongoose.Schema;
 
-const historyRowSchema = new Schema(
+const videoRowSchema = new Schema(
   {
     videoID: { type: String, required: true },
   },
@@ -10,15 +10,16 @@ const historyRowSchema = new Schema(
     timestamps: true,
   }
 );
-const userHistorySchema = new Schema({
+const userGeneralListsSchema = new Schema({
   userID: {
     type: Schema.ObjectId,
     ref: "User",
     required: true,
   },
-  videoIDs: [historyRowSchema],
+  history: [videoRowSchema],
+  toWatch: [videoRowSchema],
 });
 
-userHistorySchema.set("toJSON", { virtuals: true });
+userGeneralListsSchema.set("toJSON", { virtuals: true });
 
-module.exports = mongoose.model("UserHistory", userHistorySchema);
+module.exports = mongoose.model("UserGeneralLists", userGeneralListsSchema);
