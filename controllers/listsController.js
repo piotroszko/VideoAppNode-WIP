@@ -323,7 +323,7 @@ router.post("/addToWatch/:id", verifyToken, function (req, res) {
         return res.status(httpStatus.BAD_REQUEST).send(err);
       }
       if (update) {
-        return res.status(httpStatus.OK).send(`Added to history`);
+        return res.status(httpStatus.OK).send(`Added to "to watch"`);
       } else {
         return res.status(httpStatus.BAD_REQUEST).send(`User not found`);
       }
@@ -339,7 +339,7 @@ router.delete("/removeFromToWatch/:id", verifyToken, function (req, res) {
         return res.status(httpStatus.BAD_REQUEST).send(err);
       }
       if (update) {
-        return res.status(httpStatus.OK).send(`Added to history`);
+        return res.status(httpStatus.OK).send(`Removed from "to watch"`);
       } else {
         return res.status(httpStatus.BAD_REQUEST).send(`User not found`);
       }

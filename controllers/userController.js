@@ -210,5 +210,43 @@ router.delete("/subscribe/:id", verifyToken, (req, res) => {
       .send("You cant unsubscribe to this channel.");
   }
 });
+router.get("/details/user", verifyToken, async (req, res) => {
+  try {
+    const details = await UserDetails.findOne({ userID: req.userId });
+    return res.status(httpStatus.OK).send(details);
+  } catch (err) {
+    return res.status(httpStatus.INTERNAL_SERVER_ERROR).send({ Error: err });
+  }
+});
+router.post("/notification/:notif", verifyToken, (req, res) => {
+  const notif = req.params.notif;
+  if (!notif) {
+    return res
+      .status(httpStatus.BAD_REQUEST)
+      .send({ error: "Invalid parameters in request" });
+  }
+  UserDetails.findOne({ userID: req.userId }, (err, userDetails) => {
+    if (err) {
+      return res.status(httpStatus.INTERNAL_SERVER_ERROR).send({ Error: err });
+    }
+    if (userDetails) {
+      if (notif === "emailVideo") {
+        userDetails.sendEmailOnNewVideo = !userDetails.sendEmailOnNewVideo;
+        userDetails.save();
+        return res.status(httpStatus.OK).send(userDetails);
+      } else if (notif === "emailLike") {
+        userDetails.sendEmailOnComLike = !userDetails.sendEmailOnComLike;
+        userDetails.save();
+        return res.status(httpStatus.OK).send(userDetails);
+      } else {
+        return res
+          .status(httpStatus.BAD_REQUEST)
+          .send("Invalid parameters in request");
+      }
+    } else {
+      return res.status(httpStatus.BAD_REQUEST).send("User details not found");
+    }
+  });
+});
 
 module.exports = router;
