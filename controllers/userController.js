@@ -210,6 +210,52 @@ router.delete("/subscribe/:id", verifyToken, (req, res) => {
       .send("You cant unsubscribe to this channel.");
   }
 });
+router.get("/subscribes/:id", (req, res) => {
+  const id = req.params.id;
+  if (id != req.userId) {
+    User.findOne({ _id: req.params.id }, (err, channel) => {
+      if (err) {
+        return res
+          .status(httpStatus.INTERNAL_SERVER_ERROR)
+          .send({ Error: err });
+      }
+      if (channel) {
+        UserDetails.find(
+          { subscribedToUsers: { $in: id } },
+          (err, userDetails) => {
+            if (err) {
+              return res
+                .status(httpStatus.INTERNAL_SERVER_ERROR)
+                .send({ Error: err });
+            }
+            let channelAvatar;
+            if (
+              existsSync(
+                path.join("./", "public", "users", req.params.id + ".png")
+              )
+            ) {
+              channelAvatar = path.join("./", "users", req.params.id + ".png");
+            } else {
+              channelAvatar = path.join("./", "users", "defaultAvatar.png");
+            }
+            return res.status(httpStatus.OK).send({
+              id: id,
+              subsCount: userDetails.length,
+              channelName: channel.name,
+              avatar: channelAvatar,
+            });
+          }
+        );
+      } else {
+        return res.status(httpStatus.BAD_REQUEST).send("Channel not found");
+      }
+    });
+  } else {
+    return res
+      .status(httpStatus.BAD_REQUEST)
+      .send("You cant subscribe to this channel.");
+  }
+});
 router.get("/details/user", verifyToken, async (req, res) => {
   try {
     const details = await UserDetails.findOne({ userID: req.userId });
