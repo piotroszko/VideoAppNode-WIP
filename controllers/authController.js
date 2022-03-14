@@ -4,12 +4,14 @@ const httpStatus = require("../lib/httpStatus");
 const jwtModule = require("../lib/jwtModule");
 const verifyToken = require("../lib/verifyToken");
 const User = require("../models/User");
+const ForgotToken = require("../models/ForgotToken");
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcryptjs");
 const config = require("../config/index");
 const UserPlaylists = require("../models/UserPlaylists");
 const UserGeneralLists = require("../models/UserGeneralLists");
 const UserDetails = require("../models/UserDetails");
+const { customAlphabet } = require("nanoid");
 
 router.post("/login", function (req, res) {
   const { application, email, password } = req.body;
@@ -157,6 +159,100 @@ router.post("/changePassword", verifyToken, function (req, res) {
         return res
           .status(httpStatus.NOT_FOUND)
           .send({ auth: false, error: message });
+      }
+    }
+  });
+});
+router.post("/sendForgot", function (req, res) {
+  const email = req.query.email;
+  if (!email) {
+    return res
+      .status(httpStatus.BAD_REQUEST)
+      .send({ error: "Invalid parameters in request" });
+  }
+  User.findOne({ email: email }, async function (error, user) {
+    if (error) {
+      const message = `Server error: ${error.message}`;
+      return res
+        .status(httpStatus.INTERNAL_SERVER_ERROR)
+        .send({ send: false, error: message });
+    } else {
+      if (user) {
+        const nanoid = customAlphabet(
+          "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ123456789-_",
+          15
+        );
+        let nid = nanoid();
+        ForgotToken.create({ userID: user._id, token: nid }, (err, result) => {
+          if (err) {
+            return res
+              .status(httpStatus.INTERNAL_SERVER_ERROR)
+              .send({ send: false, error: err });
+          }
+          //in this place should be node mailer or other smtp server module, which should send email to the user
+          console.log(nid);
+          return res.status(httpStatus.OK).send({ send: true, email: email });
+        });
+      } else {
+        return res.status(httpStatus.OK).send({ send: true, email: email });
+      }
+    }
+  });
+});
+
+router.post("/changeForgot/:id", function (req, res) {
+  const id = req.params.id;
+  const { password } = req.body;
+  if (!password) {
+    return res
+      .status(httpStatus.BAD_REQUEST)
+      .send({ auth: false, error: "No password provided" });
+  }
+  if (!id) {
+    return res
+      .status(httpStatus.BAD_REQUEST)
+      .send({ error: "No token provided" });
+  }
+  ForgotToken.findOne({ token: id }, function (error, token) {
+    if (error) {
+      const message = `Server error: ${error.message}`;
+      return res
+        .status(httpStatus.INTERNAL_SERVER_ERROR)
+        .send({ password: false, error: message });
+    } else {
+      if (token) {
+        User.findOne({ _id: token.userID }, function (error, user) {
+          if (error) {
+            const message = `Server error: ${error.message}`;
+            return res
+              .status(httpStatus.INTERNAL_SERVER_ERROR)
+              .send({ password: false, error: message });
+          } else {
+            if (user) {
+              const hashedPassword = bcrypt.hashSync(password, 8);
+              user.password = hashedPassword;
+
+              user.save(async function (err) {
+                if (err)
+                  return res
+                    .status(httpStatus.NOT_FOUND)
+                    .send({ password: false, error: err });
+                await ForgotToken.deleteOne({ _id: token._id });
+                return res.status(httpStatus.OK).send({ password: true });
+              });
+            } else {
+              const message = `User not found`;
+              return res
+                .status(httpStatus.NOT_FOUND)
+                .send({ password: false, error: message });
+            }
+          }
+        });
+      } else {
+        const message = `Token not found)`;
+        return res
+          .status(httpStatus.NOT_FOUND)
+          .send({ password: false, error: message });
       }
     }
   });

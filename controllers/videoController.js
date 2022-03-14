@@ -300,18 +300,10 @@ router.post(
           .output(
             path.join("./", "public", "info", "preview", videoId + ".gif")
           );
-        await Video.findOne(
-          { id: videoId, userId: req.userId },
-          function (err, vid) {
-            vid.sourceUrl = "videos/" + videoId + path.parse(file.name).ext;
-            vid.save();
-            return res.status(httpStatus.OK);
-          }
-        );
-        return res.status(httpStatus.OK);
+        return res.status(httpStatus.OK).send(data);
       }
     });
-    return res.status(httpStatus.OK);
+    return res.status(httpStatus.BAD_REQUEST).send("Video not found");
   }
 );
 
@@ -416,6 +408,7 @@ router.get("/my/", verifyToken, async function (req, res) {
       views: stats.find((s) => s.videoID == v.id).views,
       likes: stats.find((s) => s.videoID == v.id).liked.length,
       dislikes: stats.find((s) => s.videoID == v.id).disliked.length,
+      publicity: v.publicity,
       createdAt: v.createdAt,
     }));
     return res.status(httpStatus.OK).send(videos);

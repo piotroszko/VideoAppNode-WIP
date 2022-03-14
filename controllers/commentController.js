@@ -268,6 +268,7 @@ router.get("/my/", verifyToken, async function (req, res) {
               .length,
             dislikes: commentLikes.find((cl) => cl.commentID == c._id).disliked
               .length,
+            createdAt: c.createdAt,
           };
         }),
     }));
