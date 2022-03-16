@@ -9,7 +9,7 @@ const jwt = require("jsonwebtoken");
 const bcrypt = require("bcryptjs");
 const config = require("../config/index");
 const formidable = require("express-formidable");
-const { readdirSync, renameSync } = require("fs");
+const { readdirSync, renameSync, existsSync } = require("fs");
 const path = require("path");
 const { customAlphabet } = require("nanoid");
 const VideoStats = require("../models/VideoStats");
@@ -36,6 +36,11 @@ router.get("/v/:id", async function (req, res) {
       views: videoStats.views,
       likes: videoStats.liked.length,
       dislikes: videoStats.disliked.length,
+      publicity: video.publicity,
+      createdAt: video.createdAt,
+      mediaAvaiable: existsSync(
+        path.join("./", "public", "info", "thumbnails", video.id + ".png")
+      ),
     };
     return res.status(httpStatus.OK).send(videoObject);
   } catch (err) {
@@ -59,7 +64,7 @@ router.get("/recommended/:id/:page?", async function (req, res) {
       .limit(limit)
       .skip(limit * page);
     if (videoFind.length === 0) {
-      return res.status(httpStatus.OK).send({ videoFind });
+      return res.status(httpStatus.OK).send([]);
     }
 
     const stats = await VideoStats.find({
@@ -240,7 +245,7 @@ router.post(
     uploadDir: path.join("./", "public", "videos"),
     keepExtensions: true,
   }),
-  async (req, res) => {
+  (req, res) => {
     const { videoId } = req.fields;
     const file = req.files.file;
     if (!file.type.match("video.*")) {
@@ -248,7 +253,7 @@ router.post(
         .status(httpStatus.BAD_REQUEST)
         .send(" Bad file type. Expected video type. ");
     }
-    Video.find({ id: videoId, userId: req.userId }, async (err, data) => {
+    Video.findOne({ id: videoId, userId: req.userId }, (err, data) => {
       if (err) throw err;
       if (data.length != 0) {
         renameSync(
@@ -301,11 +306,52 @@ router.post(
             path.join("./", "public", "info", "preview", videoId + ".gif")
           );
         return res.status(httpStatus.OK).send(data);
+      } else {
+        return res.status(httpStatus.BAD_REQUEST).send("Video not found");
       }
     });
-    return res.status(httpStatus.BAD_REQUEST).send("Video not found");
   }
 );
+router.post("/updateVideoInfo/:id", verifyToken, (req, res) => {
+  const { name, description, tags } = req.body;
+  const id = req.params.id;
+  if (!id) {
+    return res
+      .status(httpStatus.BAD_REQUEST)
+      .send({ update: false, error: "Invalid parameters in request. ID" });
+  }
+  if (name || description || tags) {
+    Video.findOne({ id: id, userId: req.userId }, (err, data) => {
+      if (err) throw err;
+      if (data.length !== 0) {
+        if (name) {
+          data.name = name;
+        }
+        if (description) {
+          data.description = description;
+        }
+        if (tags) {
+          data.tags = tags;
+        }
+        data.save((err) => {
+          if (err)
+            return res
+              .status(httpStatus.INTERNAL_SERVER_ERROR)
+              .send({ Error: err });
+          else return res.status(httpStatus.OK).send(data);
+        });
+      } else {
+        return res
+          .status(httpStatus.BAD_REQUEST)
+          .send({ update: false, error: "Invalid parameters in request." });
+      }
+    });
+  } else {
+    return res
+      .status(httpStatus.BAD_REQUEST)
+      .send({ update: false, error: "Invalid parameters in request" });
+  }
+});
 
 router.get("/like/:id", verifyToken, function (req, res) {
   VideoStats.findOne({ videoID: req.params.id }, function (err, videoStats) {
@@ -410,6 +456,9 @@ router.get("/my/", verifyToken, async function (req, res) {
       dislikes: stats.find((s) => s.videoID == v.id).disliked.length,
       publicity: v.publicity,
       createdAt: v.createdAt,
+      mediaAvaiable: existsSync(
+        path.join("./", "public", "info", "thumbnails", v.id + ".png")
+      ),
     }));
     return res.status(httpStatus.OK).send(videos);
   } catch (err) {
