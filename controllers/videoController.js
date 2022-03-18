@@ -352,6 +352,57 @@ router.post("/updateVideoInfo/:id", verifyToken, (req, res) => {
       .send({ update: false, error: "Invalid parameters in request" });
   }
 });
+router.post("/videoPublicity/:id", verifyToken, (req, res) => {
+  const id = req.params.id;
+  const { publicity } = req.body;
+  if (publicity) {
+    Video.findOne({ id: id, userId: req.userId }, (err, data) => {
+      if (err) throw err;
+      if (data.length !== 0) {
+        if (publicity === "public" || publicity === "link") {
+          if (
+            existsSync(path.join("./", "public", "videos", data.id + ".mp4"))
+          ) {
+            data.publicity = publicity;
+            data.save((err) => {
+              if (err)
+                return res
+                  .status(httpStatus.INTERNAL_SERVER_ERROR)
+                  .send({ Error: err });
+              else return res.status(httpStatus.OK).send(data);
+            });
+          } else {
+            return res.status(httpStatus.INTERNAL_SERVER_ERROR).send({
+              Error: "You cant change publicity if media is not available",
+            });
+          }
+        } else if (publicity === "hidden") {
+          data.publicity = publicity;
+          data.save((err) => {
+            if (err)
+              return res
+                .status(httpStatus.INTERNAL_SERVER_ERROR)
+                .send({ Error: err });
+            else return res.status(httpStatus.OK).send(data);
+          });
+        } else {
+          return res.status(httpStatus.BAD_REQUEST).send({
+            publicity: false,
+            error: "Invalid parameters in request.",
+          });
+        }
+      } else {
+        return res
+          .status(httpStatus.BAD_REQUEST)
+          .send({ publicity: false, error: "Invalid parameters in request." });
+      }
+    });
+  } else {
+    return res
+      .status(httpStatus.BAD_REQUEST)
+      .send({ publicity: false, error: "Invalid parameters in request" });
+  }
+});
 
 router.get("/like/:id", verifyToken, function (req, res) {
   VideoStats.findOne({ videoID: req.params.id }, function (err, videoStats) {
